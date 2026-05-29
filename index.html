@@ -4,370 +4,646 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>3D Levels Game</title>
+
 <style>
-  html,body { height:100%; margin:0; background:#111; overflow:hidden; font-family:Arial,Helvetica,sans-serif; }
-  #game { width:100%; height:100%; display:block; }
-  #ui {
-    position: absolute; left: 12px; top: 12px; color:#fff; z-index:10;
-    background: rgba(0,0,0,0.35); padding:10px 12px; border-radius:8px;
-    min-width:180px;
-  }
-  #ui .row { margin-bottom:6px; font-size:14px; }
-  #message {
-    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-    color:#fff; background:rgba(0,0,0,0.6); padding:18px 22px; border-radius:10px;
-    font-size:20px; display:none; z-index:20; text-align:center;
-  }
-  #hud { position:absolute; right:12px; top:12px; color:#fff; z-index:10; }
-  button { background:#1e90ff; color:#fff; border:none; padding:8px 12px; border-radius:6px; cursor:pointer; }
-  button:active { transform:translateY(1px); }
-  #footer { position:absolute; left:12px; bottom:12px; color:#ddd; font-size:12px; z-index:10; }
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #111;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+#game {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#ui {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: white;
+  background: rgba(0,0,0,0.45);
+  padding: 12px;
+  border-radius: 10px;
+  z-index: 10;
+  min-width: 200px;
+}
+
+.row {
+  margin-bottom: 8px;
+}
+
+button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #1e90ff;
+  color: white;
+  font-weight: bold;
+}
+
+button:hover {
+  background: #1877d6;
+}
+
+#message {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.75);
+  color: white;
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  display: none;
+  z-index: 20;
+}
+
+#footer {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  color: #ccc;
+  font-size: 13px;
+  z-index: 10;
+}
 </style>
 </head>
+
 <body>
+
 <canvas id="game"></canvas>
+
 <div id="ui">
   <div class="row"><strong>Level:</strong> <span id="level">1</span></div>
   <div class="row"><strong>Score:</strong> <span id="score">0</span></div>
-  <div class="row"><strong>Time:</strong> <span id="time">--</span></div>
-  <div class="row"><button id="restartBtn">Restart Level</button> <button id="nextBtn" style="display:none">Next Level</button></div>
-</div>
-<div id="hud"></div>
-<div id="message"></div>
-<div id="footer">Controls: W/A/S/D or Arrow keys. Collect all gems. Avoid obstacles.</div>
+  <div class="row"><strong>Time:</strong> <span id="time">70s</span></div>
+  <div class="row"><strong>HP:</strong> <span id="hp">100</span></div>
 
-<!-- Three.js from CDN -->
+  <div class="row">
+    <button id="restartBtn">Restart</button>
+    <button id="nextBtn" style="display:none;">Next Level</button>
+  </div>
+</div>
+
+<div id="message"></div>
+
+<div id="footer">
+  Controls: W A S D or Arrow Keys
+</div>
+
 <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
 
 <script>
-/* 3D Multi-level Game
-   - Player: cube moved by keyboard
-   - Collectibles: gems (spheres)
-   - Obstacles: moving boxes
-   - Levels: increase obstacles, speed, and reduce time
-   - Simple collision detection (AABB / sphere)
-*/
 
-/* ---------- Configurable parameters ---------- */
+/* =========================
+   CONFIG
+========================= */
+
 const CONFIG = {
-  initialLevel: 1,
-  maxLevels: 6,
+  arenaSize: 50,
+  maxLevels: 10,
   baseCollectibles: 3,
   baseObstacles: 2,
-  levelTimeBase: 45, // seconds
   obstacleSpeedBase: 0.8,
-  playerSpeedBase: 8,
-  arenaSize: 40
+  playerSpeedBase: 8
 };
 
-/* ---------- Globals ---------- */
-let scene, camera, renderer, clock;
-let player, playerVelocity = new THREE.Vector3();
-let collectibles = [], obstacles = [];
-let keys = {};
-let level = CONFIG.initialLevel;
-let score = 0;
-let levelStartTime = 0;
-let levelTimeLimit = CONFIG.levelTimeBase;
-let gameRunning = false;
-let messageEl = document.getElementById('message');
-let levelEl = document.getElementById('level');
-let scoreEl = document.getElementById('score');
-let timeEl = document.getElementById('time');
-let restartBtn = document.getElementById('restartBtn');
-let nextBtn = document.getElementById('nextBtn');
+/* =========================
+   GLOBALS
+========================= */
 
-/* ---------- Initialization ---------- */
+let scene, camera, renderer, clock;
+
+let player;
+
+let collectibles = [];
+let obstacles = [];
+
+let level = 1;
+let score = 0;
+
+let hp = 100;
+let lastHitTime = 0;
+
+let levelTimeLimit = 70;
+let levelStartTime = 0;
+
+let gameRunning = false;
+
+const keys = {};
+
+const levelEl = document.getElementById("level");
+const scoreEl = document.getElementById("score");
+const timeEl = document.getElementById("time");
+const hpEl = document.getElementById("hp");
+
+const messageEl = document.getElementById("message");
+
+const restartBtn = document.getElementById("restartBtn");
+const nextBtn = document.getElementById("nextBtn");
+
+/* =========================
+   INIT
+========================= */
+
+init();
+animate();
+
 function init() {
-  const canvas = document.getElementById('game');
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+
+  const canvas = document.getElementById("game");
+
+  renderer = new THREE.WebGLRenderer({
+    canvas,
+    antialias: true
+  });
+
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0b1220);
 
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
-  camera.position.set(0, 30, 40);
-  camera.lookAt(0, 0, 0);
+  camera = new THREE.PerspectiveCamera(
+    60,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    2000
+  );
+
+  camera.position.set(0, 25, 35);
 
   clock = new THREE.Clock();
 
-  // Lights
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+  /* LIGHTS */
+
+  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
   hemi.position.set(0, 50, 0);
   scene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 0.6);
+
+  const dir = new THREE.DirectionalLight(0xffffff, 1);
   dir.position.set(-10, 20, 10);
   scene.add(dir);
 
-  // Ground
-  const groundGeo = new THREE.PlaneGeometry(CONFIG.arenaSize, CONFIG.arenaSize);
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0x223344, roughness: 0.9 });
+  /* GROUND */
+
+  const groundGeo = new THREE.PlaneGeometry(
+    CONFIG.arenaSize,
+    CONFIG.arenaSize
+  );
+
+  const groundMat = new THREE.MeshStandardMaterial({
+    color: 0x223344
+  });
+
   const ground = new THREE.Mesh(groundGeo, groundMat);
+
   ground.rotation.x = -Math.PI / 2;
+
   scene.add(ground);
 
-  // Arena border (visual)
-  const borderGeo = new THREE.RingGeometry(CONFIG.arenaSize - 0.5, CONFIG.arenaSize, 64);
-  const borderMat = new THREE.MeshBasicMaterial({ color: 0x2f9cff, side: THREE.DoubleSide, transparent:true, opacity:0.12 });
-  const border = new THREE.Mesh(borderGeo, borderMat);
-  border.rotation.x = -Math.PI / 2;
-  scene.add(border);
+  /* PLAYER */
 
-  // Player
   const playerGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
-  const playerMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, metalness:0.2, roughness:0.4 });
+
+  const playerMat = new THREE.MeshStandardMaterial({
+    color: 0xffcc00
+  });
+
   player = new THREE.Mesh(playerGeo, playerMat);
+
   player.position.set(0, 0.8, 0);
+
   scene.add(player);
 
-  // Camera follow offset
-  camera.position.set(0, 25, 35);
+  /* EVENTS */
 
-  // Event listeners
-  window.addEventListener('resize', onResize);
-  window.addEventListener('keydown', (e) => keys[e.key.toLowerCase()] = true);
-  window.addEventListener('keyup', (e) => keys[e.key.toLowerCase()] = false);
-  restartBtn.addEventListener('click', () => startLevel(level));
-  nextBtn.addEventListener('click', () => startLevel(level + 1));
+  window.addEventListener("resize", onResize);
 
-  // Start first level
-  startLevel(level);
+  window.addEventListener("keydown", (e) => {
+    keys[e.key.toLowerCase()] = true;
+  });
 
-  animate();
+  window.addEventListener("keyup", (e) => {
+    keys[e.key.toLowerCase()] = false;
+  });
+
+  restartBtn.addEventListener("click", () => {
+    startLevel(level);
+  });
+
+  nextBtn.addEventListener("click", () => {
+    startLevel(level + 1);
+  });
+
+  startLevel(1);
 }
 
-/* ---------- Level setup ---------- */
-function startLevel(lvl) {
-  // clamp
-  if (lvl < 1) lvl = 1;
-  if (lvl > CONFIG.maxLevels) lvl = CONFIG.maxLevels;
+/* =========================
+   START LEVEL
+========================= */
 
-  // clear old objects
+function startLevel(lvl) {
+
+  if (lvl > CONFIG.maxLevels) {
+    lvl = CONFIG.maxLevels;
+  }
+
   collectibles.forEach(c => scene.remove(c.mesh));
   obstacles.forEach(o => scene.remove(o.mesh));
+
   collectibles = [];
   obstacles = [];
 
   level = lvl;
+
   levelEl.textContent = level;
-  nextBtn.style.display = 'none';
-  messageEl.style.display = 'none';
 
-  // difficulty scaling
-  const collectiblesCount = CONFIG.baseCollectibles + lvl - 1;
-  const obstaclesCount = CONFIG.baseObstacles + Math.floor((lvl - 1) * 1.25);
-  levelTimeLimit = Math.max(12, CONFIG.levelTimeBase - (lvl - 1) * 5);
-  const obstacleSpeed = CONFIG.obstacleSpeedBase + (lvl - 1) * 0.25;
-  const playerSpeed = CONFIG.playerSpeedBase + Math.min(6, lvl - 1) * 0.6;
-
-  // spawn collectibles
-  for (let i = 0; i < collectiblesCount; i++) {
-    const pos = randomPositionInArena(6);
-    const geo = new THREE.SphereGeometry(0.7, 12, 12);
-    const mat = new THREE.MeshStandardMaterial({ color: 0x66ffcc, emissive: 0x003322, metalness:0.3, roughness:0.2 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(pos.x, 0.7, pos.z);
-    scene.add(mesh);
-    collectibles.push({ mesh, collected: false, radius: 0.7 });
-  }
-
-  // spawn obstacles
-  for (let i = 0; i < obstaclesCount; i++) {
-    const pos = randomPositionInArena(8);
-    const size = 1.6 + Math.random() * 2.2;
-    const geo = new THREE.BoxGeometry(size, size, size);
-    const mat = new THREE.MeshStandardMaterial({ color: 0xff4444, metalness:0.1, roughness:0.8 });
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(pos.x, size / 2, pos.z);
-    scene.add(mesh);
-
-    // movement pattern: circular or back-and-forth
-    const pattern = Math.random() > 0.5 ? 'circle' : 'line';
-    const speed = obstacleSpeed * (0.6 + Math.random() * 1.2);
-    const radius = 3 + Math.random() * 8;
-    const axis = Math.random() > 0.5 ? 'x' : 'z';
-    obstacles.push({ mesh, pattern, speed, radius, axis, basePos: mesh.position.clone(), size });
-  }
-
-  // reset player
-  player.position.set(0, 0.8, 0);
-  playerVelocity.set(0, 0, 0);
-
-  // timers and state
-  levelStartTime = performance.now() / 1000;
-  gameRunning = true;
-
-  // store dynamic params for update loop
-  player.userData.speed = playerSpeed;
   score = 0;
   scoreEl.textContent = score;
-  updateTimeDisplay();
+
+  hp = 100;
+  hpEl.textContent = hp;
+
+  nextBtn.style.display = "none";
+
+  messageEl.style.display = "none";
+
+  const collectiblesCount =
+    CONFIG.baseCollectibles + lvl - 1;
+
+  const obstaclesCount =
+    CONFIG.baseObstacles + Math.floor((lvl - 1) * 1.25);
+
+  const obstacleSpeed =
+    CONFIG.obstacleSpeedBase + lvl * 0.2;
+
+  /* PLAYER SPEED */
+
+  player.userData.speed =
+    CONFIG.playerSpeedBase + lvl * 0.4;
+
+  /* COLLECTIBLES */
+
+  for (let i = 0; i < collectiblesCount; i++) {
+
+    const pos = randomPosition();
+
+    const geo = new THREE.SphereGeometry(0.7, 12, 12);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x66ffcc,
+      emissive: 0x003322
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+
+    mesh.position.set(pos.x, 0.7, pos.z);
+
+    scene.add(mesh);
+
+    collectibles.push({
+      mesh,
+      collected: false,
+      radius: 0.7
+    });
+  }
+
+  /* RED CUBE OBSTACLES */
+
+  for (let i = 0; i < obstaclesCount; i++) {
+
+    const pos = randomPosition();
+
+    const size = 1.5 + Math.random() * 2;
+
+    const geo = new THREE.BoxGeometry(size, size, size);
+
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0xff4444
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+
+    mesh.position.set(pos.x, size / 2, pos.z);
+
+    scene.add(mesh);
+
+    obstacles.push({
+      mesh,
+      type: "cube",
+      speed: obstacleSpeed,
+      radius: 3 + Math.random() * 7,
+      axis: Math.random() > 0.5 ? "x" : "z",
+      basePos: mesh.position.clone(),
+      size
+    });
+  }
+
+  /* TRIANGLES AFTER LEVEL 5 */
+
+  if (lvl > 5) {
+
+    for (let i = 0; i < lvl - 3; i++) {
+
+      const pos = randomPosition();
+
+      const geo = new THREE.ConeGeometry(1.2, 2, 3);
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x9933ff,
+        emissive: 0x220044
+      });
+
+      const mesh = new THREE.Mesh(geo, mat);
+
+      mesh.position.set(pos.x, 1, pos.z);
+
+      scene.add(mesh);
+
+      obstacles.push({
+        mesh,
+        type: "triangle",
+        speed: obstacleSpeed + 0.6,
+        radius: 4 + Math.random() * 6,
+        axis: Math.random() > 0.5 ? "x" : "z",
+        basePos: mesh.position.clone()
+      });
+    }
+  }
+
+  player.position.set(0, 0.8, 0);
+
+  levelStartTime = performance.now() / 1000;
+
+  gameRunning = true;
 }
 
-/* ---------- Helpers ---------- */
-function randomPositionInArena(margin = 4) {
-  const half = CONFIG.arenaSize / 2 - margin;
-  const x = (Math.random() * 2 - 1) * half;
-  const z = (Math.random() * 2 - 1) * half;
-  return new THREE.Vector3(x, 0, z);
-}
-
-function onResize() {
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-}
-
-/* ---------- Game loop ---------- */
-function animate() {
-  requestAnimationFrame(animate);
-  const dt = Math.min(0.05, clock.getDelta());
-  if (gameRunning) update(dt);
-  renderer.render(scene, camera);
-}
+/* =========================
+   UPDATE
+========================= */
 
 function update(dt) {
-  // Player movement
-  const speed = player.userData.speed || CONFIG.playerSpeedBase;
+
+  /* MOVEMENT */
+
   const dir = new THREE.Vector3();
-  if (keys['w'] || keys['arrowup']) dir.z -= 1;
-  if (keys['s'] || keys['arrowdown']) dir.z += 1;
-  if (keys['a'] || keys['arrowleft']) dir.x -= 1;
-  if (keys['d'] || keys['arrowright']) dir.x += 1;
+
+  if (keys["w"] || keys["arrowup"]) dir.z -= 1;
+  if (keys["s"] || keys["arrowdown"]) dir.z += 1;
+  if (keys["a"] || keys["arrowleft"]) dir.x -= 1;
+  if (keys["d"] || keys["arrowright"]) dir.x += 1;
+
   if (dir.lengthSq() > 0) dir.normalize();
 
-  // apply movement
+  const speed = player.userData.speed;
+
   player.position.x += dir.x * speed * dt;
   player.position.z += dir.z * speed * dt;
 
-  // clamp to arena
+  /* ARENA LIMITS */
+
   const half = CONFIG.arenaSize / 2 - 1;
-  player.position.x = Math.max(-half, Math.min(half, player.position.x));
-  player.position.z = Math.max(-half, Math.min(half, player.position.z));
 
-  // camera follow (smooth)
-  const camTarget = new THREE.Vector3(player.position.x, player.position.y + 6, player.position.z + 12);
-  camera.position.lerp(new THREE.Vector3(player.position.x, player.position.y + 20, player.position.z + 30), 0.06);
-  camera.lookAt(player.position.x, player.position.y, player.position.z);
+  player.position.x =
+    Math.max(-half, Math.min(half, player.position.x));
 
-  // update obstacles
+  player.position.z =
+    Math.max(-half, Math.min(half, player.position.z));
+
+  /* CAMERA FOLLOW */
+
+  camera.position.lerp(
+    new THREE.Vector3(
+      player.position.x,
+      player.position.y + 20,
+      player.position.z + 30
+    ),
+    0.06
+  );
+
+  camera.lookAt(player.position);
+
+  /* MOVE OBSTACLES */
+
   obstacles.forEach((o, idx) => {
+
     const t = performance.now() / 1000 * o.speed;
-    if (o.pattern === 'circle') {
-      if (o.axis === 'x') {
-        o.mesh.position.x = o.basePos.x + Math.cos(t + idx) * o.radius;
-        o.mesh.position.z = o.basePos.z + Math.sin(t + idx) * (o.radius * 0.6);
-      } else {
-        o.mesh.position.x = o.basePos.x + Math.sin(t + idx) * (o.radius * 0.6);
-        o.mesh.position.z = o.basePos.z + Math.cos(t + idx) * o.radius;
-      }
+
+    if (o.axis === "x") {
+      o.mesh.position.x =
+        o.basePos.x + Math.sin(t + idx) * o.radius;
     } else {
-      // line back-and-forth
-      const offset = Math.sin(t + idx) * o.radius;
-      if (o.axis === 'x') o.mesh.position.x = o.basePos.x + offset;
-      else o.mesh.position.z = o.basePos.z + offset;
+      o.mesh.position.z =
+        o.basePos.z + Math.sin(t + idx) * o.radius;
     }
-    o.mesh.rotation.y += 0.6 * dt;
+
+    o.mesh.rotation.y += dt;
   });
 
-  // check collectible collisions (sphere vs box)
+  /* COLLECT GEMS */
+
   collectibles.forEach(c => {
+
     if (c.collected) return;
-    const distSq = player.position.distanceToSquared(c.mesh.position);
-    const r = c.radius + 0.9; // player approx radius
+
+    const distSq =
+      player.position.distanceToSquared(c.mesh.position);
+
+    const r = 1.5;
+
     if (distSq <= r * r) {
+
       c.collected = true;
+
       scene.remove(c.mesh);
+
       score += 10;
+
       scoreEl.textContent = score;
-      // small visual feedback
-      flashMessage('+10', 700, '#66ffcc');
+
+      flashMessage("+10", "#66ffcc");
     }
   });
 
-  // check obstacle collisions (AABB)
-  const playerBox = new THREE.Box3().setFromObject(player);
+  /* COLLISIONS */
+
+  const playerBox =
+    new THREE.Box3().setFromObject(player);
+
   for (let o of obstacles) {
-    const box = new THREE.Box3().setFromObject(o.mesh);
+
+    const box =
+      new THREE.Box3().setFromObject(o.mesh);
+
     if (playerBox.intersectsBox(box)) {
-      // collision: fail level
-      endLevel(false, 'You hit an obstacle!');
-      return;
+
+      const now = performance.now();
+
+      if (now - lastHitTime < 1000) continue;
+
+      lastHitTime = now;
+
+      if (o.type === "cube") {
+
+        hp -= 50;
+
+        hpEl.textContent = hp;
+
+        flashMessage("-50 HP", "#ff4444");
+
+        if (hp <= 0) {
+
+          endLevel(false, "You lost all health!");
+
+          return;
+        }
+
+      } else if (o.type === "triangle") {
+
+        hp = 0;
+
+        hpEl.textContent = hp;
+
+        endLevel(false, "Killed by deadly triangle!");
+
+        return;
+      }
     }
   }
 
-  // check win condition
-  const remaining = collectibles.filter(c => !c.collected).length;
+  /* WIN */
+
+  const remaining =
+    collectibles.filter(c => !c.collected).length;
+
   if (remaining === 0) {
-    endLevel(true, 'Level cleared!');
+
+    endLevel(true, "Level Cleared!");
+
     return;
   }
 
-  // time update
-  updateTimeDisplay();
-  const elapsed = performance.now() / 1000 - levelStartTime;
-  if (elapsed > levelTimeLimit) {
-    endLevel(false, 'Time up!');
+  /* TIMER */
+
+  const elapsed =
+    performance.now() / 1000 - levelStartTime;
+
+  const remain =
+    Math.max(0, Math.ceil(levelTimeLimit - elapsed));
+
+  timeEl.textContent = remain + "s";
+
+  if (remain <= 0) {
+
+    endLevel(false, "Time Up!");
+
     return;
   }
 }
 
-/* ---------- UI & Level end ---------- */
-function updateTimeDisplay() {
-  const elapsed = performance.now() / 1000 - levelStartTime;
-  const remaining = Math.max(0, Math.ceil(levelTimeLimit - elapsed));
-  timeEl.textContent = remaining + 's';
-}
+/* =========================
+   END LEVEL
+========================= */
 
 function endLevel(success, text) {
+
   gameRunning = false;
-  messageEl.style.display = 'block';
-  messageEl.style.background = success ? 'rgba(0,80,0,0.7)' : 'rgba(80,0,0,0.7)';
-  messageEl.innerHTML = `<div style="font-weight:700;margin-bottom:8px">${text}</div>
-                         <div style="font-size:14px;margin-bottom:10px">Score: ${score}</div>
-                         <div><button id="msgRestart">Retry</button> ${success && level < CONFIG.maxLevels ? '<button id="msgNext">Next Level</button>' : ''}</div>`;
-  document.getElementById('msgRestart').addEventListener('click', () => {
-    messageEl.style.display = 'none';
-    startLevel(level);
-  });
+
+  messageEl.style.display = "block";
+
+  messageEl.innerHTML = `
+    <h2>${text}</h2>
+    <p>Score: ${score}</p>
+  `;
+
   if (success && level < CONFIG.maxLevels) {
-    document.getElementById('msgNext').addEventListener('click', () => {
-      messageEl.style.display = 'none';
-      startLevel(level + 1);
-    });
-  } else if (success && level >= CONFIG.maxLevels) {
-    // final victory
-    messageEl.innerHTML += `<div style="margin-top:10px;font-size:13px;color:#ddd">All levels complete. Restart to play again.</div>`;
+
+    nextBtn.style.display = "inline-block";
   }
 }
 
-/* ---------- Small helper: floating message ---------- */
-function flashMessage(text, duration = 800, color = '#fff') {
-  const el = document.createElement('div');
-  el.style.position = 'absolute';
-  el.style.left = '50%';
-  el.style.top = '18%';
-  el.style.transform = 'translateX(-50%)';
-  el.style.padding = '8px 12px';
-  el.style.background = 'rgba(0,0,0,0.6)';
-  el.style.color = color;
-  el.style.borderRadius = '6px';
-  el.style.zIndex = 30;
-  el.style.fontWeight = '700';
-  el.textContent = text;
-  document.body.appendChild(el);
-  setTimeout(() => {
-    el.style.transition = 'opacity 0.4s';
-    el.style.opacity = '0';
-    setTimeout(() => el.remove(), 420);
-  }, duration);
+/* =========================
+   HELPERS
+========================= */
+
+function animate() {
+
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(0.05, clock.getDelta());
+
+  if (gameRunning) {
+    update(dt);
+  }
+
+  renderer.render(scene, camera);
 }
 
-/* ---------- Start ---------- */
-init();
+function randomPosition() {
+
+  const half = CONFIG.arenaSize / 2 - 5;
+
+  return new THREE.Vector3(
+    (Math.random() * 2 - 1) * half,
+    0,
+    (Math.random() * 2 - 1) * half
+  );
+}
+
+function flashMessage(text, color = "#fff") {
+
+  const el = document.createElement("div");
+
+  el.style.position = "absolute";
+  el.style.left = "50%";
+  el.style.top = "20%";
+  el.style.transform = "translateX(-50%)";
+
+  el.style.padding = "10px 16px";
+
+  el.style.background = "rgba(0,0,0,0.7)";
+
+  el.style.color = color;
+
+  el.style.borderRadius = "8px";
+
+  el.style.fontWeight = "bold";
+
+  el.style.zIndex = 999;
+
+  el.textContent = text;
+
+  document.body.appendChild(el);
+
+  setTimeout(() => {
+
+    el.style.transition = "0.5s";
+    el.style.opacity = "0";
+
+    setTimeout(() => {
+      el.remove();
+    }, 500);
+
+  }, 500);
+}
+
+function onResize() {
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+
+  camera.aspect =
+    window.innerWidth / window.innerHeight;
+
+  camera.updateProjectionMatrix();
+}
 
 </script>
+
 </body>
 </html>
