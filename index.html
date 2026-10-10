@@ -1,648 +1,283 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>3D Levels Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A Love Letter for Saadha 💗</title>
 
 <style>
-html, body {
-  margin: 0;
-  height: 100%;
-  overflow: hidden;
-  background: #111;
-  font-family: Arial, Helvetica, sans-serif;
+* {
+    box-sizing: border-box;
 }
 
-#game {
-  width: 100%;
-  height: 100%;
-  display: block;
+body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Georgia, serif;
+    background: linear-gradient(145deg, #ffe4ef, #fce7f3, #f5e1ff);
+    color: #e04485;
+    text-align: center;
+    padding: 30px 16px;
 }
 
-#ui {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  color: white;
-  background: rgba(0,0,0,0.45);
-  padding: 12px;
-  border-radius: 10px;
-  z-index: 10;
-  min-width: 200px;
+.container {
+    max-width: 480px;
+    margin: auto;
 }
 
-.row {
-  margin-bottom: 8px;
+.heart {
+    font-size: 35px;
 }
 
-button {
-  padding: 8px 12px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background: #1e90ff;
-  color: white;
-  font-weight: bold;
+.subtitle {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 4px;
+    color: #d63384;
+    text-transform: uppercase;
 }
 
-button:hover {
-  background: #1877d6;
+h1 {
+    font-size: clamp(34px, 9vw, 48px);
+    font-weight: normal;
+    margin: 15px 0;
+    color: #e04485;
 }
 
-#message {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.75);
-  color: white;
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  display: none;
-  z-index: 20;
+.hint {
+    font-family: Arial, sans-serif;
+    color: #d63384;
+    font-size: 14px;
 }
 
-#footer {
-  position: absolute;
-  bottom: 10px;
-  left: 12px;
-  color: #ccc;
-  font-size: 13px;
-  z-index: 10;
+.envelope {
+    position: relative;
+    width: 250px;
+    max-width: 90%;
+    height: 160px;
+    margin: 38px auto 22px;
+    background: #ffc1d8;
+    border: 1px solid #f48bb5;
+    border-radius: 7px;
+    box-shadow: 0 12px 25px #db579133;
+    cursor: pointer;
+    display: block;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.envelope:hover {
+    transform: translateY(-5px);
+}
+
+.flap {
+    position: absolute;
+    inset: 0;
+    background: #ffdeea;
+    clip-path: polygon(0 0, 100% 0, 50% 60%);
+    border-bottom: 2px solid #f48bb5;
+    z-index: 2;
+}
+
+.pocket {
+    position: absolute;
+    inset: 0;
+    background: #ff9fc4;
+    clip-path: polygon(0 100%, 37% 43%, 50% 62%,
+                       63% 43%, 100% 100%);
+    z-index: 3;
+}
+
+.envelope-heart {
+    position: absolute;
+    z-index: 4;
+    top: 58px;
+    left: 0;
+    right: 0;
+    font-size: 42px;
+    color: #e04485;
+}
+
+.tap {
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 3px;
+    color: #d63384;
+}
+
+.letter {
+    display: none;
+    background: #fff8fc;
+    border: 1px solid #f5b2ce;
+    border-radius: 15px;
+    padding: 24px 20px;
+    margin-top: 28px;
+    text-align: left;
+    box-shadow: 0 8px 25px #db579122;
+    animation: appear 0.6s ease;
+}
+
+.letter h2 {
+    text-align: center;
+    font-size: 25px;
+    font-weight: normal;
+    color: #e04485;
+}
+
+.letter p {
+    font-size: 16px;
+    line-height: 1.85;
+    color: #d63384;
+}
+
+.signature {
+    text-align: right;
+    font-size: 19px !important;
+    color: #e04485 !important;
+}
+
+.fold {
+    display: none;
+    margin-top: 18px;
+    padding: 13px 27px;
+    background: #e04485;
+    color: white;
+    border: none;
+    border-radius: 30px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.fold:hover {
+    background: #c52d70;
+}
+
+.footer {
+    margin-top: 30px;
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    letter-spacing: 2px;
+    color: #d63384;
+}
+
+@keyframes appear {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 400px) {
+    .letter {
+        padding: 20px 15px;
+    }
+
+    .letter p {
+        font-size: 15px;
+    }
 }
 </style>
 </head>
 
 <body>
+<div class="container">
 
-<canvas id="game"></canvas>
+    <div class="heart">♡</div>
 
-<div id="ui">
-  <div class="row"><strong>Level:</strong> <span id="level">1</span></div>
-  <div class="row"><strong>Score:</strong> <span id="score">0</span></div>
-  <div class="row"><strong>Time:</strong> <span id="time">70s</span></div>
-  <div class="row"><strong>HP:</strong> <span id="hp">100</span></div>
+    <p class="subtitle">A little something for you</p>
 
-  <div class="row">
-    <button id="restartBtn">Restart</button>
-    <button id="nextBtn" style="display:none;">Next Level</button>
-  </div>
+    <h1>For Saadha 💗</h1>
+
+    <p class="hint" id="hint">
+        Someone loves you more than words can say...
+    </p>
+
+    <button class="envelope" id="envelope"
+            aria-label="Open the love letter"
+            aria-expanded="false">
+        <div class="flap"></div>
+        <div class="pocket"></div>
+        <div class="envelope-heart">♥</div>
+    </button>
+
+    <p class="tap">♡ TAP THE LETTER TO OPEN ♡</p>
+
+    <div class="letter" id="letter">
+
+        <h2>My Dearest Saadha, 💕</h2>
+
+        <p>
+            I don't think words will ever be enough to explain
+            how much I love you. You make my world brighter just
+            by being in it, and even the smallest things remind
+            me of you. Your smile means more to me than you know,
+            and talking to you can turn an ordinary day into
+            something special. If I could give you one thing in
+            life, it would be the ability to see yourself through
+            my eyes, because then you'd understand just how
+            precious, beautiful, and special you are to me.
+            No matter how many ways I say it, I'll always have
+            more love to give you. You are my favourite thought,
+            my sweetest feeling, and someone I feel so lucky to
+            have in my life. I love you more than these words can
+            ever express, Saadha. Today, tomorrow, and in all the
+            little moments in between, my heart chooses you. ❤️
+        </p>
+
+        <p class="signature">Forever yours, 💋</p>
+
+    </div>
+
+    <button class="fold" id="fold">
+        Fold my letter 💌
+    </button>
+
+    <p class="footer">
+        ♡ made with love, just for you ♡
+    </p>
+
 </div>
-
-<div id="message"></div>
-
-<div id="footer">
-  Controls: W A S D or Arrow Keys
-</div>
-
-<script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
 
 <script>
-
-/* =========================
-   CONFIG
-========================= */
-
-const CONFIG = {
-  arenaSize: 50,
-  maxLevels: 10,
-  baseCollectibles: 3,
-  baseObstacles: 2,
-  obstacleSpeedBase: 5,
-  playerSpeedBase: 8
-};
-
-/* =========================
-   GLOBALS
-========================= */
-
-let scene, camera, renderer, clock;
-
-let player;
-
-let collectibles = [];
-let obstacles = [];
-
-let level = 1;
-let score = 0;
-
-let hp = 100;
-let lastHitTime = 0;
-
-let levelTimeLimit = 70;
-let levelStartTime = 0;
-
-let gameRunning = false;
-
-const keys = {};
-
-const levelEl = document.getElementById("level");
-const scoreEl = document.getElementById("score");
-const timeEl = document.getElementById("time");
-const hpEl = document.getElementById("hp");
-
-const messageEl = document.getElementById("message");
-
-const restartBtn = document.getElementById("restartBtn");
-const nextBtn = document.getElementById("nextBtn");
-
-/* =========================
-   INIT
-========================= */
-
-init();
-animate();
-
-function init() {
-
-  const canvas = document.getElementById("game");
-
-  renderer = new THREE.WebGLRenderer({
-    canvas,
-    antialias: true
-  });
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x0b1220);
-
-  camera = new THREE.PerspectiveCamera(
-    60,
-    window.innerWidth / window.innerHeight,
-    0.1,
-    2000
-  );
-
-  camera.position.set(0, 25, 35);
-
-  clock = new THREE.Clock();
-
-  /* LIGHTS */
-
-  const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-  hemi.position.set(0, 50, 0);
-  scene.add(hemi);
-
-  const dir = new THREE.DirectionalLight(0xffffff, 1);
-  dir.position.set(-10, 20, 10);
-  scene.add(dir);
-
-  /* GROUND */
-
-  const groundGeo = new THREE.PlaneGeometry(
-    CONFIG.arenaSize,
-    CONFIG.arenaSize
-  );
-
-  const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x223344
-  });
-
-  const ground = new THREE.Mesh(groundGeo, groundMat);
-
-  ground.rotation.x = -Math.PI / 2;
-
-  scene.add(ground);
-
-  /* PLAYER */
-
-  const playerGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
-
-  const playerMat = new THREE.MeshStandardMaterial({
-    color: 0xffcc00
-  });
-
-  player = new THREE.Mesh(playerGeo, playerMat);
-
-  player.position.set(0, 0.8, 0);
-
-  scene.add(player);
-
-  /* EVENTS */
-
-  window.addEventListener("resize", onResize);
-
-  window.addEventListener("keydown", (e) => {
-    keys[e.key.toLowerCase()] = true;
-  });
-
-  window.addEventListener("keyup", (e) => {
-    keys[e.key.toLowerCase()] = false;
-  });
-
-  restartBtn.addEventListener("click", () => {
-    startLevel(level);
-  });
-
-  nextBtn.addEventListener("click", () => {
-    startLevel(level + 1);
-  });
-
-  startLevel(1);
-}
-
-/* =========================
-   START LEVEL
-========================= */
-
-function startLevel(lvl) {
-
-  if (lvl > CONFIG.maxLevels) {
-    lvl = CONFIG.maxLevels;
-  }
-
-  collectibles.forEach(c => scene.remove(c.mesh));
-  obstacles.forEach(o => scene.remove(o.mesh));
-
-  collectibles = [];
-  obstacles = [];
-
-  level = lvl;
-
-  levelEl.textContent = level;
-
-  score = 0;
-  scoreEl.textContent = score;
-
-  hp = 100;
-  hpEl.textContent = hp;
-
-  nextBtn.style.display = "none";
-
-  messageEl.style.display = "none";
-
-  const collectiblesCount =
-    CONFIG.baseCollectibles + lvl - 1;
-
-  const obstaclesCount =
-    CONFIG.baseObstacles + Math.floor((lvl - 1) * 1.25);
-
-  const obstacleSpeed =
-    CONFIG.obstacleSpeedBase + lvl * 0.2;
-
-  /* PLAYER SPEED */
-
-  player.userData.speed =
-    CONFIG.playerSpeedBase + lvl * 0.4;
-
-  /* COLLECTIBLES */
-
-  for (let i = 0; i < collectiblesCount; i++) {
-
-    const pos = randomPosition();
-
-    const geo = new THREE.SphereGeometry(0.7, 12, 12);
-
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x66ffcc,
-      emissive: 0x003322
-    });
-
-    const mesh = new THREE.Mesh(geo, mat);
-
-    mesh.position.set(pos.x, 0.7, pos.z);
-
-    scene.add(mesh);
-
-    collectibles.push({
-      mesh,
-      collected: false,
-      radius: 0.7
-    });
-  }
-
-  /* RED CUBE OBSTACLES */
-
-  for (let i = 0; i < obstaclesCount; i++) {
-
-    const pos = randomPosition();
-
-    const size = 1.5 + Math.random() * 2;
-
-    const geo = new THREE.BoxGeometry(size, size, size);
-
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0xff4444
-    });
-
-    const mesh = new THREE.Mesh(geo, mat);
-
-    mesh.position.set(pos.x, size / 2, pos.z);
-
-    scene.add(mesh);
-
-    obstacles.push({
-      mesh,
-      type: "cube",
-      speed: obstacleSpeed,
-      radius: 3 + Math.random() * 7,
-      axis: Math.random() > 0.5 ? "x" : "z",
-      basePos: mesh.position.clone(),
-      size
-    });
-  }
-
-  /* TRIANGLES AFTER LEVEL 5 */
-
-  if (lvl > 5) {
-
-    for (let i = 0; i < lvl - 3; i++) {
-
-      const pos = randomPosition();
-
-      const geo = new THREE.ConeGeometry(1.2, 2, 3);
-
-      const mat = new THREE.MeshStandardMaterial({
-        color: 0x9933ff,
-        emissive: 0x220044
-      });
-
-      const mesh = new THREE.Mesh(geo, mat);
-
-      mesh.position.set(pos.x, 1, pos.z);
-
-      scene.add(mesh);
-
-      obstacles.push({
-        mesh,
-        type: "triangle",
-        speed: obstacleSpeed + 0.6,
-        radius: 4 + Math.random() * 6,
-        axis: Math.random() > 0.5 ? "x" : "z",
-        basePos: mesh.position.clone()
-      });
+const envelope = document.getElementById("envelope");
+const letter = document.getElementById("letter");
+const fold = document.getElementById("fold");
+const hint = document.getElementById("hint");
+
+let opened = false;
+
+function toggleLetter() {
+    opened = !opened;
+
+    letter.style.display = opened ? "block" : "none";
+    fold.style.display = opened ? "inline-block" : "none";
+
+    hint.textContent = opened
+        ? "A little piece of my heart, just for you 💗"
+        : "Someone loves you more than words can say...";
+
+    envelope.setAttribute("aria-expanded", opened);
+    envelope.setAttribute(
+        "aria-label",
+        opened ? "Close the love letter" : "Open the love letter"
+    );
+
+    if (opened) {
+        setTimeout(() => {
+            letter.scrollIntoView({
+                behavior: "smooth",
+                block: "nearest"
+            });
+        }, 100);
     }
-  }
-
-  player.position.set(0, 0.8, 0);
-
-  levelStartTime = performance.now() / 1000;
-
-  gameRunning = true;
 }
 
-/* =========================
-   UPDATE
-========================= */
-
-function update(dt) {
-
-  /* MOVEMENT */
-
-  const dir = new THREE.Vector3();
-
-  if (keys["w"] || keys["arrowup"]) dir.z -= 1;
-  if (keys["s"] || keys["arrowdown"]) dir.z += 1;
-  if (keys["a"] || keys["arrowleft"]) dir.x -= 1;
-  if (keys["d"] || keys["arrowright"]) dir.x += 1;
-
-  if (dir.lengthSq() > 0) dir.normalize();
-
-  const speed = player.userData.speed;
-
-  player.position.x += dir.x * speed * dt;
-  player.position.z += dir.z * speed * dt;
-
-  /* ARENA LIMITS */
-
-  const half = CONFIG.arenaSize / 2 - 1;
-
-  player.position.x =
-    Math.max(-half, Math.min(half, player.position.x));
-
-  player.position.z =
-    Math.max(-half, Math.min(half, player.position.z));
-
-  /* CAMERA FOLLOW */
-
-  camera.position.lerp(
-    new THREE.Vector3(
-      player.position.x,
-      player.position.y + 20,
-      player.position.z + 30
-    ),
-    0.06
-  );
-
-  camera.lookAt(player.position);
-
-  /* MOVE OBSTACLES */
-
-  obstacles.forEach((o, idx) => {
-
-    const t = performance.now() / 1000 * o.speed;
-
-    if (o.axis === "x") {
-      o.mesh.position.x =
-        o.basePos.x + Math.sin(t + idx) * o.radius;
-    } else {
-      o.mesh.position.z =
-        o.basePos.z + Math.sin(t + idx) * o.radius;
-    }
-
-    o.mesh.rotation.y += dt;
-  });
-
-  /* COLLECT GEMS */
-
-  collectibles.forEach(c => {
-
-    if (c.collected) return;
-
-    const distSq =
-      player.position.distanceToSquared(c.mesh.position);
-
-    const r = 1.5;
-
-    if (distSq <= r * r) {
-
-      c.collected = true;
-
-      scene.remove(c.mesh);
-
-      score += 10;
-
-      scoreEl.textContent = score;
-
-      flashMessage("+10", "#66ffcc");
-    }
-  });
-
-  /* COLLISIONS */
-
-  const playerBox =
-    new THREE.Box3().setFromObject(player);
-
-  for (let o of obstacles) {
-
-    const box =
-      new THREE.Box3().setFromObject(o.mesh);
-
-    if (playerBox.intersectsBox(box)) {
-
-      const now = performance.now();
-
-      if (now - lastHitTime < 1000) continue;
-
-      lastHitTime = now;
-
-      if (o.type === "cube") {
-
-        hp -= 50;
-
-        hpEl.textContent = hp;
-
-        flashMessage("-50 HP", "#ff4444");
-
-        if (hp <= 0) {
-
-          endLevel(false, "You lost all health!");
-
-          return;
-        }
-
-      } else if (o.type === "triangle") {
-
-        hp = 0;
-
-        hpEl.textContent = hp;
-
-        endLevel(false, "Killed by deadly triangle!");
-
-        return;
-      }
-    }
-  }
-
-  /* WIN */
-
-  const remaining =
-    collectibles.filter(c => !c.collected).length;
-
-  if (remaining === 0) {
-
-    endLevel(true, "Level Cleared!");
-
-    return;
-  }
-
-  /* TIMER */
-
-  const elapsed =
-    performance.now() / 1000 - levelStartTime;
-
-  const remain =
-    Math.max(0, Math.ceil(levelTimeLimit - elapsed));
-
-  timeEl.textContent = remain + "s";
-
-  if (remain <= 0) {
-
-    endLevel(false, "Time Up!");
-
-    return;
-  }
-}
-
-/* =========================
-   END LEVEL
-========================= */
-
-function endLevel(success, text) {
-
-  gameRunning = false;
-
-  messageEl.style.display = "block";
-
-  messageEl.innerHTML = `
-    <h2>${text}</h2>
-    <p>Score: ${score}</p>
-  `;
-
-  if (success && level < CONFIG.maxLevels) {
-
-    nextBtn.style.display = "inline-block";
-  }
-}
-
-/* =========================
-   HELPERS
-========================= */
-
-function animate() {
-
-  requestAnimationFrame(animate);
-
-  const dt = Math.min(0.05, clock.getDelta());
-
-  if (gameRunning) {
-    update(dt);
-  }
-
-  renderer.render(scene, camera);
-}
-
-function randomPosition() {
-
-  const half = CONFIG.arenaSize / 2 - 5;
-
-  return new THREE.Vector3(
-    (Math.random() * 2 - 1) * half,
-    0,
-    (Math.random() * 2 - 1) * half
-  );
-}
-
-function flashMessage(text, color = "#fff") {
-
-  const el = document.createElement("div");
-
-  el.style.position = "absolute";
-  el.style.left = "50%";
-  el.style.top = "20%";
-  el.style.transform = "translateX(-50%)";
-
-  el.style.padding = "10px 16px";
-
-  el.style.background = "rgba(0,0,0,0.7)";
-
-  el.style.color = color;
-
-  el.style.borderRadius = "8px";
-
-  el.style.fontWeight = "bold";
-
-  el.style.zIndex = 999;
-
-  el.textContent = text;
-
-  document.body.appendChild(el);
-
-  setTimeout(() => {
-
-    el.style.transition = "0.5s";
-    el.style.opacity = "0";
-
-    setTimeout(() => {
-      el.remove();
-    }, 500);
-
-  }, 500);
-}
-
-function onResize() {
-
-  renderer.setSize(window.innerWidth, window.innerHeight);
-
-  camera.aspect =
-    window.innerWidth / window.innerHeight;
-
-  camera.updateProjectionMatrix();
-}
-
+envelope.addEventListener("click", toggleLetter);
+fold.addEventListener("click", toggleLetter);
 </script>
 
 </body>
